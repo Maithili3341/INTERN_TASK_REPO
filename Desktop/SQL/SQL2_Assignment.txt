@@ -1,0 +1,98 @@
+CASE 1
+Q1: SELECT EmpName, DeptName FROM Employee JOIN Department ON Employee.DeptID = Department.DeptID;
+Q2: SELECT EmpName, Salary FROM Employee JOIN (SELECT AVG(Salary) AS AvgSalary FROM Employee) A ON Salary > A.AvgSalary;
+
+CASE 2
+Q1: SELECT Title, BorrowerName FROM Loans JOIN Books ON Loans.BookID = Books.BookID JOIN Borrowers ON Loans.BorrowerID = Borrowers.BorrowerID;
+Q2: SELECT Title FROM Books LEFT JOIN Loans ON Books.BookID = Loans.BookID WHERE Loans.BookID IS NULL;
+Q3: GRANT SELECT ON Books TO user_name;
+
+CASE 3
+Q1: SELECT OrderID, CustomerName FROM Orders JOIN Customers ON Orders.CustomerID = Customers.CustomerID;
+Q2: SELECT CustomerName FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID GROUP BY CustomerName HAVING COUNT(OrderID) > 1;
+
+CASE 4
+Q1: SELECT EnrollmentID, StudentName, CourseName FROM Enrollments JOIN Students ON Enrollments.StudentID = Students.StudentID JOIN Courses ON Enrollments.CourseID = Courses.CourseID;
+Q2: SELECT StudentName FROM Students JOIN Enrollments ON Students.StudentID = Enrollments.StudentID JOIN Courses ON Enrollments.CourseID = Courses.CourseID WHERE CourseName = 'Course 1';
+
+CASE 5
+Q1: SELECT PatientName, DoctorName, AppointmentDate FROM Appointments JOIN Patients ON Appointments.PatientID = Patients.PatientID JOIN Doctors ON Patients.DoctorID = Doctors.DoctorID;
+Q2: SELECT DoctorName FROM Doctors JOIN Patients ON Doctors.DoctorID = Patients.DoctorID GROUP BY DoctorName HAVING COUNT(PatientID) > 1;
+Q3: REVOKE INSERT ON Patients FROM user_name;
+
+CASE 6
+Q1: SELECT ClassName, TeacherName FROM TeacherClasses JOIN Teachers ON TeacherClasses.TeacherID = Teachers.TeacherID JOIN Classes ON TeacherClasses.ClassID = Classes.ClassID;
+Q2: SELECT TeacherName FROM Teachers JOIN TeacherClasses ON Teachers.TeacherID = TeacherClasses.TeacherID JOIN Classes ON TeacherClasses.ClassID = Classes.ClassID WHERE ClassName = 'Class 1';
+
+CASE 7
+Q1: SELECT ProductName, CustomerName FROM Orders JOIN Products ON Orders.ProductID = Products.ProductID JOIN Customers ON Orders.CustomerID = Customers.CustomerID;
+Q2: SELECT ProductName FROM Products LEFT JOIN Orders ON Products.ProductID = Orders.ProductID WHERE Orders.ProductID IS NULL;
+
+CASE 8
+Q1: SELECT RestaurantName, CustomerName, ReservationDate FROM Reservations JOIN Restaurants ON Reservations.RestaurantID = Restaurants.RestaurantID JOIN Customers ON Reservations.CustomerID = Customers.CustomerID;
+Q2: SELECT RestaurantName FROM Restaurants LEFT JOIN Reservations ON Restaurants.RestaurantID = Reservations.RestaurantID WHERE Reservations.RestaurantID IS NULL;
+Q3: GRANT SELECT, INSERT ON Reservations TO user_name;
+
+CASE 9
+Q1: SELECT CustomerName, Amount, TransactionDate FROM Transactions JOIN Accounts ON Transactions.AccountID = Accounts.AccountID JOIN Customers ON Accounts.CustomerID = Customers.CustomerID;
+Q2: SELECT CustomerName FROM Customers JOIN Accounts ON Customers.CustomerID = Accounts.CustomerID JOIN (SELECT AVG(Balance) AvgBal FROM Accounts) A ON Accounts.Balance > A.AvgBal;
+
+CASE 10
+Q1: SELECT Title, DirectorName FROM MovieDirectors JOIN Movies ON MovieDirectors.MovieID = Movies.MovieID JOIN Directors ON MovieDirectors.DirectorID = Directors.DirectorID;
+Q2: SELECT DirectorName FROM Directors JOIN MovieDirectors ON Directors.DirectorID = MovieDirectors.DirectorID JOIN Movies ON MovieDirectors.MovieID = Movies.MovieID WHERE ReleaseYear = 2021;
+Q3: GRANT UPDATE ON Movies TO user_name;
+
+CASE 11
+Q1: Quantity INT CHECK (Quantity > 0);
+Q2: SELECT * FROM Sales WHERE YEAR(SaleDate) = 2024;
+Q3: SELECT *, ROW_NUMBER() OVER (PARTITION BY YEAR(SaleDate) ORDER BY SaleDate) AS RowNum FROM Sales;
+
+CASE 12
+Q1: Score INT CHECK (Score BETWEEN 1 AND 10);
+Q2: SELECT EmpID, Year, Score, AVG(Score) OVER (PARTITION BY EmpID) AS AvgScore FROM Performance;
+Q3: SELECT EmpID, Year, Score, RANK() OVER (PARTITION BY Year ORDER BY Score DESC) AS RankNo FROM Performance;
+Q4: SELECT EmpID, Year, Score, DENSE_RANK() OVER (PARTITION BY Year ORDER BY Score DESC) AS DenseRankNo FROM Performance;
+
+CASE 13
+Q1: Price DECIMAL(10,2) CHECK (Price > 0);
+Q2: SELECT * FROM Products WHERE CategoryID = 1;
+Q3: SELECT ProductID, CategoryID, Price, SUM(Price) OVER (PARTITION BY CategoryID ORDER BY ProductID) AS CumPrice FROM Products;
+
+CASE 14
+Q1: AccountBalance DECIMAL(10,2) CHECK (AccountBalance >= 0);
+Q2: SELECT CustomerID, TransactionDate, Amount, ROW_NUMBER() OVER (PARTITION BY CustomerID ORDER BY TransactionDate) AS RowNum FROM Transactions;
+Q3: SELECT CustomerName, AccountBalance, RANK() OVER (ORDER BY AccountBalance DESC) AS RankNo FROM Customers;
+
+CASE 15
+Q1: TotalAmount DECIMAL(10,2) CHECK (TotalAmount >= 0);
+Q2: SELECT * FROM Orders WHERE YEAR(OrderDate) = 2024;
+Q3: SELECT CustomerID, OrderDate, TotalAmount, SUM(TotalAmount) OVER (PARTITION BY CustomerID ORDER BY OrderDate) AS RunningTotal FROM Orders;
+
+CASE 16
+Q1: Score INT CHECK (Score BETWEEN 0 AND 100);
+Q2: SELECT StudentID, Subject, Score, RANK() OVER (PARTITION BY Subject ORDER BY Score DESC) AS RankNo FROM Grades;
+Q3: SELECT StudentID, Subject, Score, DENSE_RANK() OVER (PARTITION BY Subject ORDER BY Score DESC) AS DenseRankNo FROM Grades;
+
+CASE 17
+Q1: Quantity INT CHECK (Quantity >= 0);
+Q2: SELECT * FROM Inventory WHERE WarehouseID = 1;
+Q3: SELECT ItemID, LastUpdated, Quantity, Quantity - LAG(Quantity) OVER (PARTITION BY ItemID ORDER BY LastUpdated) AS QtyDiff FROM Inventory;
+
+CASE 18
+Q1: Quantity INT CHECK (Quantity > 0);
+Q1: TotalSpent DECIMAL(10,2) CHECK (TotalSpent >= 0);
+Q2: SELECT ProductName, Price, RANK() OVER (ORDER BY Price DESC) AS RankNo FROM Products;
+Q3: SELECT CustomerName, TotalSpent, DENSE_RANK() OVER (ORDER BY TotalSpent DESC) AS DenseRankNo FROM Customers;
+Q4: SELECT ProductID, SaleDate, Quantity, SUM(Quantity) OVER (PARTITION BY ProductID ORDER BY SaleDate) AS CumQty FROM Sales;
+
+CASE 19
+Q1: Age INT CHECK (Age > 0);
+Q2: SELECT DoctorID, AppointmentDate, ROW_NUMBER() OVER (PARTITION BY DoctorID ORDER BY AppointmentDate) AS RowNum FROM Appointments;
+Q3: SELECT DoctorID, RANK() OVER (ORDER BY COUNT(AppointmentID) DESC) AS RankNo FROM Appointments GROUP BY DoctorID;
+
+CASE 20
+Q1: SeatCapacity INT CHECK (SeatCapacity > 0);
+Q1: FrequentFlyerPoints INT CHECK (FrequentFlyerPoints >= 0);
+Q2: SELECT * FROM Flights WHERE YEAR(DepartureDate) = 2024;
+Q3: SELECT PassengerID, FrequentFlyerPoints, SUM(FrequentFlyerPoints) OVER (PARTITION BY PassengerID ORDER BY PassengerID) AS CumPoints FROM Passengers;
+Q4: SELECT PassengerName, FrequentFlyerPoints, DENSE_RANK() OVER (ORDER BY FrequentFlyerPoints DESC) AS DenseRankNo FROM Passengers;

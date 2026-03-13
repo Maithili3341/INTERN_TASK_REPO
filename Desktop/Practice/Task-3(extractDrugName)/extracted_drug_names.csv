@@ -1,0 +1,6 @@
+PRODUCT_ID,URL_LINK,DRUG_NAME
+P001,https://example.com/drug/aspirin/info,aspirin
+P002,https://example.com/drug/paracetamol,paracetamol
+P003,https://pharma.com/product/ibuprofen/details,
+P004,https://healthsite.org/drug/amoxicillin?ref=home,amoxicillin
+P005,https://meddata.net/medicine/cetirizine/usage,

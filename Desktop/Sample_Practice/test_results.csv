@@ -1,0 +1,11 @@
+Test,Status,Details
+Test 1: Duplicate Customer IDs,PASS,Found 0 duplicate Customer IDs
+Test 2: Email Format Validation,PASS,Found 0 invalid emails out of 100 records
+Test 3: NULL/Missing Values Check,PASS,No missing values found
+Test 4: Phone Number Format Validation,PASS,Found 0 records with invalid phone numbers out of 100
+Test 5: Subscription Date Validity,PASS,Found 0 invalid dates out of 100 records
+Test 6: Country Name Validation,PASS,Found 0 potentially invalid country names: []
+Test 7: Duplicate Email Addresses,PASS,Found 0 duplicate email addresses
+Test 8: Website URL Format Validation,PASS,Found 0 invalid URLs out of 100 non-empty URLs
+Test 9: Empty Strings in Required Fields,PASS,No empty strings found in required fields
+Test 10: Data Completeness Summary,PASS,Average completeness: 100.0%
