@@ -1,0 +1,392 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Graph Explorer</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        height: 100vh;
+        font-family: Arial;
+        transition: 0.3s;
+      }
+
+      body.light {
+        background: #fff;
+        color: #000;
+      }
+      body.dark {
+        background: #1e1e1e;
+        color: #ddd;
+      }
+
+      /* GRAPH */
+      #network {
+        width: 75%;
+        height: 100vh;
+        border-right: 1px solid #ccc;
+      }
+
+      /* PANEL */
+      #panel {
+        width: 25%;
+        display: flex;
+        flex-direction: column;
+        background: #f4f6f8;
+      }
+      body.dark #panel {
+        background: #2a2a2a;
+      }
+
+      /* SECTION */
+      .section {
+        border-bottom: 1px solid #ccc;
+        padding: 10px;
+      }
+
+      .section-content {
+        max-height: 110px;
+        overflow-y: auto;
+      }
+
+      /* SEARCH */
+      #searchBox {
+        width: 100%;
+        padding: 5px;
+      }
+
+      #suggestions {
+        border: 1px solid #ccc;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+      body.dark #suggestions {
+        background: #333;
+      }
+
+      /* ITEMS */
+      .node-item {
+        cursor: pointer;
+        padding: 2px;
+        color: #007bff;
+      }
+      body.dark .node-item {
+        color: #66b3ff;
+      }
+
+      .node-item:hover {
+        background: #e6f2ff;
+      }
+      body.dark .node-item:hover {
+        background: #444;
+      }
+
+      /* OVERLAY CONTROLS */
+      .overlay {
+        position: absolute;
+        z-index: 10;
+        display: flex;
+        gap: 5px;
+      }
+
+      #topControls {
+        top: 10px;
+        left: 10px;
+      }
+      #bottomControls {
+        bottom: 10px;
+        left: 10px;
+      }
+
+      .overlay button {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: white;
+        cursor: pointer;
+      }
+      body.dark .overlay button {
+        background: #444;
+        color: white;
+      }
+    </style>
+  </head>
+
+  <body class="light">
+    <div id="network"></div>
+
+    <div id="panel">
+      <div class="section">
+        <h3>🔍 Search</h3>
+        <input type="text" id="searchBox" onkeyup="showSuggestions()" />
+        <button onclick="searchNode()">Go</button>
+        <div id="suggestions"></div>
+      </div>
+
+      <div class="section">
+        <h3>📊 Details</h3>
+        <div id="info" class="section-content">Click node</div>
+      </div>
+
+      <div class="section">
+        <h3>🧠 Path</h3>
+        <div id="path" class="section-content"></div>
+      </div>
+
+      <div class="section">
+        <h3>🎨 Legend</h3>
+        <div>
+          <div style="color: red">■ Selected</div>
+          <div style="color: #4da6ff">■ Parent</div>
+          <div style="color: #ffa500">■ Child</div>
+          <div>━ Thick Line = Path</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>🔁 View Mode</h3>
+        <div id="viewMode">Mode: Local</div>
+      </div>
+    </div>
+
+    <!-- OVERLAY CONTROLS -->
+    <div id="topControls" class="overlay">
+      <button onclick="goBack()">⬅</button>
+      <button onclick="goForward()">➡</button>
+      <button onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div id="bottomControls" class="overlay">
+      <button onclick="toggleView()">🔁 Toggle</button>
+    </div>
+
+    <script>
+      let network;
+      let nodes = new vis.DataSet();
+      let edges = new vis.DataSet();
+
+      let historyStack = [];
+      let forwardStack = [];
+      let allNodes = [];
+      let isFullView = false;
+
+      // INIT
+      Promise.all([
+        fetch("/graph").then((res) => res.json()),
+        fetch("/all_nodes").then((res) => res.json()),
+      ]).then(([graphData, nodeList]) => {
+        nodes.add(graphData.nodes);
+        allNodes = nodeList;
+
+        network = new vis.Network(
+          document.getElementById("network"),
+          { nodes, edges },
+          {
+            layout: {
+              hierarchical: {
+                enabled: true,
+                direction: "UD",
+                sortMethod: "directed",
+
+                levelSeparation: 200, // vertical gap
+                nodeSpacing: 350, // 🔥 horizontal gap (increase this)
+                treeSpacing: 300,
+
+                blockShifting: true,
+                edgeMinimization: false,
+                parentCentralization: true,
+              },
+            },
+            physics: false,
+            nodes: {
+              shape: "box",
+              margin: 20, // 🔥 padding inside box
+              widthConstraint: {
+                maximum: 180,
+              },
+              font: {
+                size: 14,
+              },
+            },
+            edges: {
+              smooth: true,
+            },
+          },
+        );
+
+        network.once("stabilizationIterationsDone", () => {
+          network.setOptions({ physics: false });
+        });
+
+        network.on("click", (params) => {
+          if (params.nodes.length > 0) {
+            loadNode(params.nodes[0], true);
+          }
+        });
+      });
+
+      // CORE
+      function loadNode(nodeId, saveHistory = true) {
+        if (saveHistory) {
+          historyStack.push(nodeId);
+          forwardStack = [];
+        }
+
+        let url = isFullView ? `/full_lineage/${nodeId}` : `/expand/${nodeId}`;
+
+        fetch(url)
+          .then((res) => res.json())
+          .then((data) => {
+            nodes.clear();
+            edges.clear();
+
+            nodes.add({
+              id: nodeId,
+              label: nodeId,
+              color: "red",
+              shape: "box",
+            });
+
+            let parents = [];
+            let children = [];
+
+            data.edges.forEach((e) => {
+              if (e.to === nodeId) parents.push(e);
+              if (e.from === nodeId) children.push(e);
+
+              if (!nodes.get(e.from)) {
+                nodes.add({
+                  id: e.from,
+                  label: e.from,
+                  color: "#4da6ff",
+                  shape: "box",
+                });
+              }
+
+              if (!nodes.get(e.to)) {
+                nodes.add({
+                  id: e.to,
+                  label: e.to,
+                  color: "#ffa500",
+                  shape: "box",
+                });
+              }
+
+              edges.add({
+                id: e.from + "-" + e.to,
+                from: e.from,
+                to: e.to,
+                width: 1,
+              });
+            });
+
+            network.setData({ nodes, edges });
+            network.fit();
+
+            updatePanel(nodeId, parents, children);
+            loadPath(nodeId);
+          });
+      }
+
+      // PATH
+      function loadPath(nodeId) {
+        fetch(`/path/${nodeId}`)
+          .then((res) => res.json())
+          .then((path) => {
+            document.getElementById("path").innerHTML =
+              path.join(" → ") + " → <b>" + nodeId + "</b>";
+
+            highlightPath(path);
+          });
+      }
+
+      function highlightPath(path) {
+        edges.get().forEach((e) => edges.update({ id: e.id, width: 1 }));
+
+        for (let i = 0; i < path.length - 1; i++) {
+          let id = path[i] + "-" + path[i + 1];
+          if (edges.get(id)) edges.update({ id: id, width: 5 });
+        }
+      }
+
+      // PANEL
+      function updatePanel(nodeId, parents, children) {
+        function render(list, type) {
+          if (!list.length) return "None";
+
+          return list
+            .map((e) => {
+              let id = type === "parent" ? e.from : e.to;
+              return `<div class="node-item" onclick="loadNode('${id}')">${id}</div>`;
+            })
+            .join("");
+        }
+
+        document.getElementById("info").innerHTML = `<b>${nodeId}</b><br><br>
+         <b>Parents:</b><br>${render(parents, "parent")}<br><br>
+         <b>Children:</b><br>${render(children, "child")}`;
+      }
+
+      // SEARCH
+      function showSuggestions() {
+        let val = document.getElementById("searchBox").value;
+        let box = document.getElementById("suggestions");
+
+        if (val.length < 3) {
+          box.innerHTML = "Type 3+ chars";
+          return;
+        }
+
+        let matches = allNodes.filter((n) => n.includes(val)).slice(0, 20);
+
+        box.innerHTML = matches
+          .map(
+            (n) =>
+              `<div class="node-item" onclick="loadNode('${n}')">${n}</div>`,
+          )
+          .join("");
+      }
+
+      function searchNode() {
+        let val = document.getElementById("searchBox").value;
+        if (val) loadNode(val);
+      }
+
+      // HISTORY
+      function goBack() {
+        if (historyStack.length > 1) {
+          let cur = historyStack.pop();
+          forwardStack.push(cur);
+          loadNode(historyStack[historyStack.length - 1], false);
+        }
+      }
+
+      function goForward() {
+        if (forwardStack.length > 0) {
+          let next = forwardStack.pop();
+          historyStack.push(next);
+          loadNode(next, false);
+        }
+      }
+
+      // TOGGLE VIEW
+      function toggleView() {
+        isFullView = !isFullView;
+        document.getElementById("viewMode").innerText =
+          "Mode: " + (isFullView ? "Full Lineage" : "Local");
+
+        if (historyStack.length) {
+          loadNode(historyStack[historyStack.length - 1], false);
+        }
+      }
+
+      // DARK MODE
+      function toggleTheme() {
+        document.body.classList.toggle("dark");
+        document.body.classList.toggle("light");
+      }
+    </script>
+  </body>
+</html>
